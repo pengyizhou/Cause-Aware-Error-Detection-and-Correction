@@ -19,7 +19,14 @@ Parakeet-ASR/
 ├── evaluate_confidence_recall.py      # Evaluate confidence-based error detection
 ├── compute-wer.py                     # Word Error Rate computation tool
 ├── decode_accent.sh                   # Decode accented speech datasets with WER
-└── decode_confidence.sh               # Decode with entropy-based confidence evaluation
+├── decode_confidence.sh               # Decode with entropy-based confidence evaluation
+└── label_processing/                  # Post-ASR label generation pipeline
+    ├── README.md                      # Label processing documentation
+    ├── process_results.sh             # Step 1: Filter corrupted timestamps
+    ├── process_timestamps_distorted.sh # Step 2: Find overlapping utterances
+    ├── process_understand.sh          # Step 3: Generate comprehension labels
+    ├── process_token_labels_deletion2.sh # Step 4: Generate perception labels
+    └── process_token_labels_for_sound_events.sh # Step 5: Generate distortion event labels
 ```
 
 ## Core Components
@@ -284,6 +291,47 @@ python evaluate_confidence_recall.py \
     results/test/recog.txt \
     > results/test/wer_result.txt
 ```
+
+## Post-ASR Label Generation
+
+After running ASR inference, you need to generate labels for downstream tasks (comprehension, perception, distortion event detection). The label processing pipeline is located in the `label_processing/` directory.
+
+### Workflow
+
+1. **Run ASR Inference** (this directory)
+   - Use `decode_accent.sh` or `decode_confidence.sh` to generate transcriptions and timestamps
+   - Outputs: `recog.txt`, `token_timestamps.txt`, `transcription.txt`, etc.
+
+2. **Generate Labels** (`label_processing/` directory)
+   - Process ASR results to generate frame-level and token-level labels
+   - Supports three label types:
+     - **Comprehension labels**: For intelligibility/comprehension tasks
+     - **Perception labels**: For ASR error detection (with deletion distinction)
+     - **Distortion event labels**: For distortion type classification
+
+### Quick Start
+
+```bash
+# After ASR decoding, navigate to label_processing directory
+cd label_processing
+
+# Step 1: Filter corrupted timestamps
+bash process_results.sh
+
+# Step 2: Find overlapping utterances (for distorted data)
+bash process_timestamps_distorted.sh
+
+# Step 3: Generate comprehension labels (for clean data)
+bash process_understand.sh
+
+# Step 4: Generate perception labels (for distorted data)
+bash process_token_labels_deletion2.sh
+
+# Step 5: Generate distortion event labels (for distorted data)
+bash process_token_labels_for_sound_events.sh
+```
+
+For detailed documentation on the label processing pipeline, see [`label_processing/README.md`](label_processing/README.md).
 
 ## SLURM Configuration
 
