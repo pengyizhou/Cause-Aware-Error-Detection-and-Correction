@@ -1,4 +1,4 @@
-#!/home/asrxiv/home2/anaconda3/envs/icefall-nemo/bin/python3.10
+#!/usr/bin/env python3
 
 import nemo.collections.asr as nemo_asr
 import torch

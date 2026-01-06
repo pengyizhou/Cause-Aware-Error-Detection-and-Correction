@@ -16,6 +16,7 @@ import tempfile
 import subprocess
 import soundfile as sf
 import os
+import shutil
 from typing import Dict, List, Tuple, Optional, Union
 from scipy.signal import fftconvolve
 import warnings
@@ -444,9 +445,16 @@ def reencode_segment_low_bitrate(segment: np.ndarray, sr: int,
         # Write input
         sf.write(in_wav, segment, sr, subtype='PCM_16')
         
+        # Find ffmpeg executable (check environment variable first, then PATH)
+        ffmpeg_path = os.getenv('FFMPEG_PATH', None)
+        if ffmpeg_path is None or not os.path.exists(ffmpeg_path):
+            ffmpeg_path = shutil.which('ffmpeg')
+        if ffmpeg_path is None:
+            raise RuntimeError("ffmpeg not found. Please install ffmpeg or set FFMPEG_PATH environment variable.")
+        
         # Re-encode with ffmpeg
         cmd = [
-            "/home/asrxiv/.local/share/ffmpeg-7.0.2-amd64-static/ffmpeg", "-y", "-loglevel", "error",
+            ffmpeg_path, "-y", "-loglevel", "error",
             "-i", in_wav,
             "-c:a", codec,
             "-b:a", f"{bitrate_kbps}k",
