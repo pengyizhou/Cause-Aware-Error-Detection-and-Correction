@@ -11,10 +11,10 @@ This repository implements a multi-stage system for improving ASR accuracy by:
 
 ## Repository Structure
 
-### `utils/data_prepare/`
+### `data_prepare/`
 Data preparation and distortion simulation. Generates various types of speech distortions (noise, RIR, interference, packet loss, missing segments) and corresponding frame-level labels.
 
-**See**: [utils/data_prepare/README.md](utils/data_prepare/README.md)
+**See**: [data_prepare/README.md](data_prepare/README.md)
 
 ### `Parakeet-ASR/`
 ASR inference using NVIDIA Parakeet TDT model. Includes:
@@ -40,7 +40,7 @@ Frame-level classification models for error detection:
 
 1. **Data Preparation**: Generate distorted audio datasets with frame-level labels
    ```bash
-   cd utils/data_prepare
+   cd data_prepare
    # Follow instructions in README.md
    ```
 
