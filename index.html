@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Conversation Flow</title>
+    <style>
+        /* --- CSS STYLING --- */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 40px 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px; /* Limits width for readability */
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding-bottom: 100px;
+        }
+
+        /* Start Button */
+        #start-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        button {
+            padding: 15px 30px;
+            font-size: 18px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,123,255,0.3);
+            transition: transform 0.2s;
+        }
+        button:hover { transform: scale(1.05); }
+
+        /* Message Rows */
+        .row {
+            display: flex;
+            width: 100%;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .row.visible { opacity: 1; transform: translateY(0); }
+
+        /* Alignment */
+        .row.user { justify-content: flex-start; }
+        .row.agent { justify-content: flex-end; }
+        .row.system { justify-content: center; }
+
+        /* Icons */
+        .icon {
+            width: 50px; height: 50px;
+            font-size: 30px;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .user .icon { margin-right: 15px; }
+        .agent .icon { margin-left: 15px; }
+
+        /* Bubbles */
+        .bubble {
+            max-width: 70%;
+            padding: 15px 20px;
+            border-radius: 18px;
+            font-size: 16px;
+            line-height: 1.5;
+            position: relative;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        /* Specific Styles */
+        .user .bubble {
+            background-color: #f0f0f0;
+            border: 1px solid #ddd;
+            border-top-left-radius: 2px;
+        }
+
+        .agent .bubble {
+            background-color: #e3f2fd; /* Light Blue */
+            color: #333;
+            border-top-right-radius: 2px;
+        }
+
+        .system .bubble {
+            background-color: #fff3e0; /* Light Orange/Peach */
+            border: 1px solid #ffe0b2;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            color: #d84315;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .system-icon { font-size: 20px; }
+        
+        /* Highlight styles for system output */
+        .tag { color: #1976d2; font-weight: bold; }
+        .wer { font-weight: bold; color: #333; margin-left: 8px; }
+        del { color: #d32f2f; text-decoration: line-through; }
+
+    </style>
+</head>
+<body>
+
+    <div id="start-overlay">
+        <button onclick="startConversation()">▶ Play Conversation</button>
+    </div>
+
+    <div class="container" id="chat-box">
+        </div>
+
+    <script>
+        /* --- CONFIGURATION --- */
+        // Place your audio files in a folder named 'audio'
+        // Ensure filenames match exactly.
+        const scriptData = [
+            // --- ROUND 1 ---
+            {
+                role: 'user',
+                text: "What is the average air one's lungs?",
+                audio: 'audio/turn1.wav', 
+                fallbackDuration: 2000 // duration in ms if audio fails
+            },
+            {
+                role: 'system',
+                content: `📄 What is the average air <span class="tag">&lt;del&gt;</span> <span class="tag">&lt;unknown&gt;</span>one's<span class="tag">&lt;/unknown&gt;</span> lungs?`,
+                delay: 1000
+            },
+            {
+                role: 'agent',
+                text: "In your question \"what is the average air … lungs?\", I missed the words right after \"average air\" (could you repeat that part—ideally closer to the mic), and did you mean \"in one's lungs\" or something else for \"one's\"?",
+                delay: 2000
+            },
+
+            // --- ROUND 2 ---
+            {
+                role: 'user',
+                text: "I said pressure of a human's lungs, and I meant of a human's lungs, not in one's lungs.",
+                audio: 'audio/turn2.wav',
+                fallbackDuration: 6000
+            },
+            {
+                role: 'system',
+                content: `📄 <span class="tag">&lt;FINAL&gt;</span> what is the average air pressure of a human's lungs?`,
+                delay: 1000
+            },
+            {
+                role: 'agent',
+                text: "Air pressure in the lungs isn't a single fixed value—it varies slightly around atmospheric pressure during breathing. At rest (between breaths): alveolar (lung) pressure is essentially equal to atmospheric pressure, about 101.3 kPa (760 mmHg, 1 atm) at sea level. During a normal quiet breath: alveolar pressure typically swings by about ±1 cmH₂O relative to atmospheric pressure (roughly ±0.1 kPa or ±0.75 mmHg): Inhalation: ~−1 cmH₂O (slightly below atmospheric); Exhalation: ~+1 cmH₂O (slightly above atmospheric). If you meant intrapleural pressure (pressure in the pleural space around the lungs), that's normally negative, roughly −5 cmH₂O at rest, becoming more negative during inspiration.",
+                delay: 2000
+            }
+        ];
+
+        /* --- LOGIC --- */
+        const chatBox = document.getElementById('chat-box');
+
+        function startConversation() {
+            document.getElementById('start-overlay').style.display = 'none';
+            runSequence();
+        }
+
+        async function runSequence() {
+            for (const step of scriptData) {
+                if (step.role === 'user') {
+                    await playUserTurn(step);
+                } else {
+                    await playSystemOrAgent(step);
+                }
+            }
+        }
+
+        function createRow(role) {
+            const row = document.createElement('div');
+            row.className = `row ${role}`;
+            
+            const iconDiv = document.createElement('div');
+            iconDiv.className = 'icon';
+            
+            // Assign Icons
+            if (role === 'user') iconDiv.innerText = '👤'; 
+            if (role === 'agent') iconDiv.innerText = '🤖';
+
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+
+            if (role === 'user') {
+                row.appendChild(iconDiv);
+                row.appendChild(bubble);
+            } else if (role === 'agent') {
+                row.appendChild(bubble);
+                row.appendChild(iconDiv);
+            } else {
+                // System has no side icon, just the bubble
+                row.appendChild(bubble);
+            }
+
+            chatBox.appendChild(row);
+            
+            // Animation Trigger
+            setTimeout(() => row.classList.add('visible'), 50);
+            window.scrollTo(0, document.body.scrollHeight);
+
+            return bubble;
+        }
+
+        function playUserTurn(step) {
+            return new Promise(resolve => {
+                const bubble = createRow('user');
+                const audio = new Audio(step.audio);
+                
+                // When metadata loads, we know duration
+                audio.onloadedmetadata = () => {
+                    const duration = audio.duration * 1000;
+                    typeWriter(bubble, step.text, duration, resolve);
+                    audio.play();
+                };
+
+                // Fallback if audio missing
+                audio.onerror = () => {
+                    console.warn(`Audio ${step.audio} missing. Using fallback.`);
+                    typeWriter(bubble, step.text, step.fallbackDuration, resolve);
+                };
+            });
+        }
+
+        function typeWriter(element, text, duration, callback) {
+            const words = text.split(" ");
+            const msPerWord = duration / words.length;
+            let i = 0;
+
+            const interval = setInterval(() => {
+                if (i >= words.length) {
+                    clearInterval(interval);
+                    setTimeout(callback, 500); // Pause briefly after speaking
+                } else {
+                    element.innerHTML += (i === 0 ? "" : " ") + words[i];
+                    window.scrollTo(0, document.body.scrollHeight);
+                    i++;
+                }
+            }, msPerWord);
+        }
+
+        function playSystemOrAgent(step) {
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    const bubble = createRow(step.role);
+                    // Use 'content' for HTML (system) or 'text' for plain text (agent)
+                    bubble.innerHTML = step.content || step.text; 
+                    setTimeout(resolve, 1500); // Wait for user to read
+                }, step.delay);
+            });
+        }
+    </script>
+</body>
+</html>
